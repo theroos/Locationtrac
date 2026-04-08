@@ -106,15 +106,29 @@ class MainActivity : ComponentActivity() {
     private fun getDistrictName(lat: Double, long: Double): String {
         return try {
             val geocoder = Geocoder(this, Locale.getDefault())
-            val addresses = geocoder.getFromLocation(lat, long, 1)
+            val address = geocoder.getFromLocation(lat, long, 1)?.firstOrNull()
 
-            if (!addresses.isNullOrEmpty()) {
-                addresses[0].subAdminArea ?: "Unknown District"
-            } else {
-                "Unknown District"
-            }
+            address?.let {
+
+                // Try best possible fields
+                when {
+                    !it.subAdminArea.isNullOrEmpty() &&
+                            !it.subAdminArea.contains("Division", true) ->
+                        it.subAdminArea
+
+                    !it.locality.isNullOrEmpty() ->
+                        it.locality
+
+                    !it.subLocality.isNullOrEmpty() ->
+                        it.subLocality
+
+                    else -> "Unknown District"
+                }
+
+            } ?: "Unknown District"
+
         } catch (e: Exception) {
-            "Error Fetching District"
+            "No Internet / Unable to detect district"
         }
     }
 
@@ -133,7 +147,7 @@ fun DistrictScreen(district: String) {
     ) {
         Text(
             text = "You are currently at $district",
-            fontSize = 20.sp
+            fontSize = 16.sp
         )
     }
 }
