@@ -10,11 +10,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresPermission
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -26,7 +29,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
-    private val districtState = mutableStateOf("Detecting District...")
+    private val districtState = mutableStateOf("Detecting Location...")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,20 +115,19 @@ class MainActivity : ComponentActivity() {
 
                 // Try best possible fields
                 when {
-                    !it.subAdminArea.isNullOrEmpty() &&
-                            !it.subAdminArea.contains("Division", true) ->
-                        it.subAdminArea
+                    !it.subLocality.isNullOrEmpty() ->
+                        it.subLocality   // Ballygunge, Salt Lake, etc.
 
                     !it.locality.isNullOrEmpty() ->
-                        it.locality
+                        it.locality      // Kolkata fallback
 
-                    !it.subLocality.isNullOrEmpty() ->
-                        it.subLocality
+                    !it.subAdminArea.isNullOrEmpty() ->
+                        it.subAdminArea  // district fallback
 
-                    else -> "Unknown District"
+                    else -> "Unknown Area"
                 }
 
-            } ?: "Unknown District"
+            } ?: "Unknown Location"
 
         } catch (e: Exception) {
             "No Internet / Unable to detect district"
@@ -141,16 +143,27 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun DistrictScreen(district: String) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "You are currently at $district",
-            fontSize = 16.sp
-        )
+
+    Box(modifier = Modifier.fillMaxSize()){
+        Box(
+            modifier = Modifier.align(Alignment.BottomCenter).
+            padding(16.dp).
+            fillMaxWidth(0.8f).
+            background(color = androidx.compose.ui.graphics.Color.Gray,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "You are currently at $district area",
+                fontSize = 18.sp
+            )
+        }
+
     }
+
 }
+
+
 
 @Preview(showBackground = true)
 @Composable

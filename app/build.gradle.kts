@@ -51,6 +51,8 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
+    implementation("org.osmdroid:osmdroid-android:6.1.16")
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
