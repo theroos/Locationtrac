@@ -13,12 +13,14 @@ import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.locationtrac.ui.theme.LocationTracTheme
@@ -31,6 +33,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var locationCallback: LocationCallback
     private val districtState = mutableStateOf("Detecting Location...")
 
+    private val latState = mutableStateOf(22.5726) // default Kolkata
+    private val longState = mutableStateOf(88.3639)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -41,8 +46,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             LocationTracTheme {
-                DistrictScreen(districtState.value)
+                DistrictScreen(lat = latState.value, long = longState.value, districtState.value)
             }
+        }
+
+        org.osmdroid.config.Configuration.getInstance().apply {
+            userAgentValue = packageName
+            load(this@MainActivity, getSharedPreferences("osm", MODE_PRIVATE))
         }
 
         // Permission check
@@ -89,10 +99,10 @@ class MainActivity : ComponentActivity() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 for (location in result.locations) {
-                    val district = getDistrictName(
-                        location.latitude,
-                        location.longitude
-                    )
+                    latState.value = location.latitude
+                    longState.value = location.longitude
+
+                    val district = getDistrictName(location.latitude, location.longitude)
                     districtState.value = district
                 }
             }
@@ -142,20 +152,23 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun DistrictScreen(district: String) {
+fun DistrictScreen(lat: Double, long: Double, district: String) {
 
     Box(modifier = Modifier.fillMaxSize()){
+
+        OpenStreetMapView(lat, long)
+
         Box(
             modifier = Modifier.align(Alignment.BottomCenter).
             padding(16.dp).
             fillMaxWidth(0.8f).
-            background(color = androidx.compose.ui.graphics.Color.Gray,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).padding(20.dp),
+            background(color = androidx.compose.ui.graphics.Color.White,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).padding(10.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "You are currently at $district area",
-                fontSize = 18.sp
+                fontSize = 15.sp
             )
         }
 
@@ -168,5 +181,42 @@ fun DistrictScreen(district: String) {
 @Preview(showBackground = true)
 @Composable
 fun DistrictScreenPreview() {
-    DistrictScreen("Kolkata")
+    DistrictScreen(lat = 22.5726, long = 88.3639, district = "Kolkata")
 }
+
+
+@Composable
+fun OpenStreetMapView(lat: Double, long: Double) {
+    AndroidView(
+        factory = { context ->
+            org.osmdroid.views.MapView(context).apply {
+                setMultiTouchControls(true)
+                controller.setZoom(15.0)
+            }
+        },
+        update = { mapView ->
+
+            val geoPoint = org.osmdroid.util.GeoPoint(lat, long)
+            mapView.controller.animateTo(geoPoint)
+            mapView.controller.setZoom(17.0)
+
+            mapView.invalidate()
+
+            mapView.overlays.clear()
+
+            val marker = org.osmdroid.views.overlay.Marker(mapView)
+            marker.position = geoPoint
+            marker.icon = ContextCompat.getDrawable(mapView.context,R.drawable.locationpincopy)
+            marker.setAnchor(
+                org.osmdroid.views.overlay.Marker.ANCHOR_CENTER,
+                org.osmdroid.views.overlay.Marker.ANCHOR_BOTTOM
+            )
+
+            mapView.overlays.add(marker)
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+
+
